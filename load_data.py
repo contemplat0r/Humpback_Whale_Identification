@@ -164,7 +164,7 @@ def validate(test_loader, model):
     return accuracy
 
 
-class HumanProteinAtlasDataset(data.Dataset):
+class HumpbackWhalesDataset(data.Dataset):
 
     def __init__(self, images_description_df, transform=None, train_mode=True):
 
@@ -179,56 +179,16 @@ class HumanProteinAtlasDataset(data.Dataset):
     def __len__(self):
         return self.images_description_df.shape[0]
 
-
     def __getitem__(self, index):
-        #color_image = self._load_multicolor_image(index)
-        color_image, image_id = self._load_image_color_components(index)
-        color_image = color_image * IMAGE_SCALE_FACTOR
-        if self.transform:
-                color_image = self.transform(color_image)
-        if self.train_mode:
-            multilabel_target = self._load_multilabel_target(index)
-            return color_image, multilabel_target[0]
-        else:
-            return color_image, image_id
-
-
-    def _load_multicolor_image(self, index):
-        img_components_id = self.images_description_df.iloc[index]['Id']
-        #print("_load_multicolor_image, img_components_id: ", img_components_id)
-        image_color_components = []
-        for color in COLORS:
-            path_to_color_component_file = pathlib.Path(
-                    self.path_to_img_dir, '{}_{}.{}'.format(
-                        img_components_id, color, IMAGE_FILE_EXT
-                    )
+        image_name = self.images_description_df.iloc[index]['Image']
+        image_id = self.images_description_df.iloc[index]['Id']
+        path_to_image_file = pathlib.Path(
+                self.path_to_img_dir, '{}'.format(
+                    image_name
                 )
-            image_color_components.append(Image.open(path_to_color_component_file))
-        return Image.merge('RGBA', bands=image_color_components) 
-
-    def _load_image_color_components(self, index):
-        img_components_id = self.images_description_df.iloc[index]['Id']
-        #print("_load_multicolor_image, img_components_id: ", img_components_id)
-        #image_color_components = []
-        image_color_components = np.zeros(shape=(IMG_WIDTH, IMG_HEIGTH, 4))
-        for i, color in enumerate(COLORS):
-            path_to_color_component_file = pathlib.Path(
-                    self.path_to_img_dir, '{}_{}.{}'.format(
-                        img_components_id, color, IMAGE_FILE_EXT
-                    )
-                )
-            #image_color_components.append(Image.open(path_to_color_component_file))
-            image_color_components[:, :, i] = np.asarray(
-                    Image.open(path_to_color_component_file).resize((IMG_WIDTH, IMG_HEIGTH))
-                )
-        return image_color_components, img_components_id
-
-    def _load_multilabel_target(self, index):
-        return multilabel_binarizer.transform(
-                [
-                    np.array(
-                        self.images_description_df[TARGETS_COLUMN_NAME].iloc[index].split(' ')
-                    ).astype(np.int8)
-                ]
             )
+        image = Image.open(path_to_image_file)
+        if self.transform:
+            image = self.transform(image)
 
+        return image, image_id
