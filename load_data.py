@@ -9,6 +9,8 @@ import pandas as pd
 import matplotlib.image as mpimg
 from sklearn.preprocessing import MultiLabelBinarizer
 from PIL import Image
+import skimage
+from skimage import io as img_io
 
 import torch
 from torchvision import datasets, transforms, models
@@ -169,6 +171,7 @@ class HumpbackWhalesDataset(data.Dataset):
     def __init__(self, images_description_df, transform=None, train_mode=True):
 
         self.images_description_df = images_description_df.copy()
+        self.encoded_images_description_df = self._encode(images_description_df)
         self.transform = transform
         self.train_mode = train_mode
         if train_mode:
@@ -180,14 +183,15 @@ class HumpbackWhalesDataset(data.Dataset):
         return self.images_description_df.shape[0]
 
     def __getitem__(self, index):
-        image_name = self.images_description_df.iloc[index]['Image']
-        image_id = self.images_description_df.iloc[index]['Id']
+        image_name = self.encoded_images_description_df.iloc[index]['Image']
+        image_id = self.encoded_images_description_df.iloc[index]['Id']
         path_to_image_file = pathlib.Path(
                 self.path_to_img_dir, '{}'.format(
                     image_name
                 )
             )
-        image = Image.open(path_to_image_file)
+        #image = Image.open(path_to_image_file)
+        image = img_io.imread(path_to_image_file)
         
         sample = {'image': image, 'label': image_id}
 
@@ -195,3 +199,11 @@ class HumpbackWhalesDataset(data.Dataset):
             sample = self.transform(sample)
 
         return sample
+    
+    def _encode(self, images_description_df):
+        unique_classes = pd.unique(images_description_df['Id'])
+        encoding = dict(enumerate(unique_classes))
+        encoding = {value: key for key, value in encoding.items()}
+        self.encoding = encoding
+        return images_description_df.replace(encoding)
+
