@@ -188,7 +188,10 @@ class HumpbackWhalesDataset(data.Dataset):
                 )
             )
         image = Image.open(path_to_image_file)
-        if self.transform:
-            image = self.transform(image)
+        
+        sample = {'image': image, 'label': image_id}
 
-        return image, image_id
+        if self.transform:
+            sample = self.transform(sample)
+
+        return sample
