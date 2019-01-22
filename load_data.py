@@ -185,6 +185,7 @@ class HumpbackWhalesDataset(data.Dataset):
     def __getitem__(self, index):
         image_name = self.encoded_images_description_df.iloc[index]['Image']
         image_id = self.encoded_images_description_df.iloc[index]['Id']
+        #image_color_components = np.zeros(shape=(IMG_WIDTH, IMG_HEIGTH, 4))
         path_to_image_file = pathlib.Path(
                 self.path_to_img_dir, '{}'.format(
                     image_name
@@ -206,4 +207,10 @@ class HumpbackWhalesDataset(data.Dataset):
         encoding = {value: key for key, value in encoding.items()}
         self.encoding = encoding
         return images_description_df.replace(encoding)
+
+    def _count_image_color_channels(self, image):
+        if len(image.shape) == 2:
+            return 1
+        else:
+            return 3
 
