@@ -239,7 +239,8 @@ class HumpbackWhalesDataset(data.Dataset):
                     image_name
                 )
             )
-        image = Image.open(path_to_image_file).convert('RGB')
+        #image = Image.open(path_to_image_file).convert('RGB')
+        image = Image.open(path_to_image_file).convert('L')
         #image = img_io.imread(path_to_image_file)
         #print("type(image):", type(image))
         #print("image:\n", image)
