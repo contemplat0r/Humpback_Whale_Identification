@@ -295,27 +295,27 @@ def crossvalidation(
         train_dataset_loader = dataset_loaders['train']
         validation_dataset_loader = dataset_loaders['validation']
 
-        
-        # Output format for train_func, and validation_funct must be in concordance (match?, coincide?) with input data format
-        # of metric_calulcator. By default - (predicted) values of targets. But in dependence of train/validation func format can be,
-        # for example, bollean vector with results of comparison of predicted and true target values. Or (in case of this 
-        # competition) not standart. Code must be extended to captre this situation? In this cases true target (train/validation)
-        # values and metric_calculator must be give (as parameters) to train_func/validation_func and in code must be reailized
-        # corresponding "if" statement (to select code with "plain" train/validation functions that receive, as parameters,
-        # model and train/val dataset part and code with "complex" train/val functions that receive also true targets values,
-        # and metric_calculator. Parameters of this function (simple_offset_crossvalidation) must be contains boolean value
-        # for switching between described options.
-        model, train_losses, train_predicted_targets = train_func(model, train_dataset_part)
-        save_model(model, model_name='{}_{}'.format(model_name, str(fold_num)))
-        train_losses_values.append(train_losses)
-        train_predicted_targets_values.append(train_predicted_targets)
+        for epoch in range(num_of_epoch):
+            # Output format for train_func, and validation_funct must be in concordance (match?, coincide?) with input data format
+            # of metric_calulcator. By default - (predicted) values of targets. But in dependence of train/validation func format can be,
+            # for example, bollean vector with results of comparison of predicted and true target values. Or (in case of this 
+            # competition) not standart. Code must be extended to captre this situation? In this cases true target (train/validation)
+            # values and metric_calculator must be give (as parameters) to train_func/validation_func and in code must be reailized
+            # corresponding "if" statement (to select code with "plain" train/validation functions that receive, as parameters,
+            # model and train/val dataset part and code with "complex" train/val functions that receive also true targets values,
+            # and metric_calculator. Parameters of this function (simple_offset_crossvalidation) must be contains boolean value
+            # for switching between described options.
+            model, train_losses, train_predicted_targets = train_func(model, train_dataset_part)
+            save_model(model, model_name='{}_{}'.format(model_name, str(fold_num)))
+            train_losses_values.append(train_losses)
+            train_predicted_targets_values.append(train_predicted_targets)
 
-        validation_losses, validation_predicted_targets = validation_func(model, validation_dataset_part)
-        validation_losses_values.append(validation_losses)
-        validation_predicted_targets_values.append(validation_predicted_targets)
+            validation_losses, validation_predicted_targets = validation_func(model, validation_dataset_part)
+            validation_losses_values.append(validation_losses)
+            validation_predicted_targets_values.append(validation_predicted_targets)
 
-        train_metrics_values.append(metric_calculator(train_predicted_targets, train_targets_part))
-        validation_metric_values.append(metric_calculator(validation_predicted_targets, validation_targets_part))
+            train_metrics_values.append(metric_calculator(train_predicted_targets, train_targets_part))
+            validation_metric_values.append(metric_calculator(validation_predicted_targets, validation_targets_part))
 
     return (
             train_metrics_values,
