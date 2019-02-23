@@ -181,8 +181,6 @@ def train_model(num_of_epoch, model, dataset_loaders, dataset_sizes, criterion, 
     model.load_state_dict(best_model_weights)
     return train_losses, validation_losses, train_accuracies, validation_accuracies
 
-
-
 def crossvalidation(model, dataset, targets, dataset_size, partition_func, train_func, validation_func, folds_num, model_name='model'):
     indices_per_fold = dataset_size / folds_num
 
@@ -203,7 +201,6 @@ def crossvalidation(model, dataset, targets, dataset_size, partition_func, train
         validation_metric_values.append(validation_func(model, validation_dataset_part))
 
     return validation_metric_values
-
 
 #def simple_offset_crossvalidation(model, dataset, targets, dataset_size, partition_func, train_func, validation_func, metric_calculator, folds_num):
 def simple_offset_crossvalidation(model, dataset, targets, dataset_size, train_func, validation_func, metric_calculator, folds_num, model_name='model'):
@@ -277,16 +274,25 @@ def crossvalidation(
         epoch_num,
         model_name='model'
     ):
+
+    torch.cuda.empty_cache()
+    since = time.time()
+
+    best_model_metric = 0.0
+    best_model_weights = model.state_dict()
+
     indices_per_fold = dataset_size / folds_num
 
     train_valid_ratio = (folds_num - 1.0) / folds_num
 
     train_losses_values = []
     validation_losses_values = []
-    validation_metric_values = []
-    train_metrics_values = []
+
     validation_predicted_targets_values = []
     train_predicted_targets_values = []
+
+    validation_metric_values = []
+    train_metrics_values = []
 
 
     for fold_num in range(folds_num - 1):
@@ -296,6 +302,13 @@ def crossvalidation(
         validation_dataset_loader = dataset_loaders['validation']
 
         for epoch in range(num_of_epoch):
+            eposh_train_losses_values = []
+            eposh_validation_losses_values = []
+            eposh_validation_metric_values = []
+            eposh_train_metrics_values = []
+            eposh_validation_predicted_targets_values = []
+            eposh_train_predicted_targets_values = []
+
             # Output format for train_func, and validation_funct must be in concordance (match?, coincide?) with input data format
             # of metric_calulcator. By default - (predicted) values of targets. But in dependence of train/validation func format can be,
             # for example, bollean vector with results of comparison of predicted and true target values. Or (in case of this 
@@ -305,26 +318,61 @@ def crossvalidation(
             # model and train/val dataset part and code with "complex" train/val functions that receive also true targets values,
             # and metric_calculator. Parameters of this function (simple_offset_crossvalidation) must be contains boolean value
             # for switching between described options.
-            model, train_losses, train_predicted_targets = train_func(model, train_dataset_part)
+            model, train_losses, train_predicted_targets = train_func(
+                    model,
+                    train_dataset_loader,
+                    criterion,
+                    optimizer
+                )
             save_model(model, model_name='{}_{}'.format(model_name, str(fold_num)))
-            train_losses_values.append(train_losses)
-            train_predicted_targets_values.append(train_predicted_targets)
 
-            validation_losses, validation_predicted_targets = validation_func(model, validation_dataset_part)
-            validation_losses_values.append(validation_losses)
-            validation_predicted_targets_values.append(validation_predicted_targets)
+            eposh_train_losses_values.append(train_losses)
+            eposh_train_predicted_targets_values.append(train_predicted_targets)
 
-            train_metrics_values.append(metric_calculator(train_predicted_targets, train_targets_part))
-            validation_metric_values.append(metric_calculator(validation_predicted_targets, validation_targets_part))
+            eposh_validation_losses, validation_predicted_targets = validation_func(
+                    model,
+                    validation_dataset_loader,
+                    criterion
+                )
+
+            eposh_validation_losses_values.append(validation_losses)
+            eposh_validation_predicted_targets_values.append(validation_predicted_targets)
+
+            eposh_train_metrics_values.append(metric_calculator(train_predicted_targets, train_targets_part))
+            eposh_validation_metric_values.append(metric_calculator(validation_predicted_targets, validation_targets_part))
+
+            if eposh_validation_metric_values[-1] > best_model_metric:
+                best_model_metric = eposh_validation_metric_values[-1]
+                best_model_weights = model.state_dict()
+
+        train_losses_values.append(eposh_train_losses_values)
+        validation_losses_values.append(eposh_validation_losses_values)
+
+        train_predicted_targets_values.append(eposh_train_predicted_targets_values)
+        validation_predicted_targets_values.append(eposh_validation_predicted_targets_values)
+
+        train_metrics_values.append(eposh_train_metrics_values)
+
+        validation_metric_values.append(eposh_validation_metric_values)
+
+    print("Finished Training")
+    time_elapsed = time.time() - since
+    print(
+            'Training complete in {:.0f}m {:.0f}s'.format(
+            time_elapsed // 60, time_elapsed % 60
+        )
+    )
+
+    model.load_state_dict(best_model_weights)
 
     return (
-            train_metrics_values,
-            validation_metric_values,
             train_losses_values,
-            validation_losses_values
-            train_targets_part,
-            train_predicted_targets,
-            validation_targets_part,
-            validation_predicted_targets
+            validation_losses_values,
+
+            train_predicted_targets_values,
+            validation_predicted_targets_values,
+
+            train_metrics_values,
+            validation_metric_values
         )
 
