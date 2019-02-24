@@ -98,6 +98,41 @@ def one_epoch_train(model, data_loader, criterion, optimizer):
     #epoch_train_accuracy = correct_predicted_total / train_dataset_size
     return (total_loss, accuracy)
 
+def one_epoch_train(model, data_loader, criterion, optimizer):
+    
+    accuracy = 0.0
+    total_loss = 0.0
+    correct_predicted_total = 0.0
+    
+    for i, data_batch in enumerate(data_loader, 0):
+        
+        inputs, labels = unfold_batch(data_batch)
+        if inputs.size()[0] == BATCH_SIZE:
+        
+            inputs = inputs.to(device, dtype=torch.float)
+            labels = labels.to(device, dtype=torch.float)
+            optimizer.zero_grad()
+        
+            outputs = model(inputs)
+
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
+        
+            total_loss += loss.item() * inputs.size(0)
+        
+            predicted = outputs > 0
+            labels = labels.data.byte()
+            sum_of_correct_predicted = torch.sum((predicted[0] == labels))
+            
+            item = sum_of_correct_predicted.item()
+            correct_predicted_total += item
+        
+    #accuracy = correct_predicted_total
+    
+    #epoch_train_accuracy = correct_predicted_total / train_dataset_size
+    return (total_loss, predicted, labels)
+
 
 def one_epoch_validate(model, data_loader, criterion):
     model.eval()
@@ -129,6 +164,38 @@ def one_epoch_validate(model, data_loader, criterion):
         accuracy = correct_predicted_total        
 
     return (total_loss, accuracy)
+
+def one_epoch_validate(model, data_loader, criterion):
+    model.eval()
+    with torch.no_grad():
+        
+        correct_predicted_total = 0.0
+        total_loss = 0.0
+
+        for data_batch in data_loader:
+            inputs, labels = unfold_batch(data_batch)
+            if inputs.size()[0] == BATCH_SIZE:
+
+                inputs = inputs.to(device, dtype=torch.float)
+                labels = labels.to(device, dtype=torch.float)
+                #labels = labels.to(device, dtype=torch.long)
+                outputs = model(inputs)
+            
+                loss = criterion(outputs, labels)
+                total_loss += loss.item() * inputs.size(0)
+            
+                predicted = outputs > 0
+            
+                labels = labels.data.byte()
+                sum_of_correct_predicted = torch.sum((predicted[0] == labels))
+                item = sum_of_correct_predicted.item()
+
+                correct_predicted_total += item
+
+        #accuracy = correct_predicted_total        
+
+    return (total_loss, predicted, labels)
+
 
 def train_model(num_of_epoch, model, dataset_loaders, dataset_sizes, criterion, optimizer):
     torch.cuda.empty_cache()
@@ -318,7 +385,7 @@ def crossvalidation(
             # model and train/val dataset part and code with "complex" train/val functions that receive also true targets values,
             # and metric_calculator. Parameters of this function (simple_offset_crossvalidation) must be contains boolean value
             # for switching between described options.
-            model, train_losses, train_predicted_targets = train_func(
+            model, train_losses, train_predicted_targets, train_true_targets = train_func(
                     model,
                     train_dataset_loader,
                     criterion,
@@ -329,7 +396,7 @@ def crossvalidation(
             eposh_train_losses_values.append(train_losses)
             eposh_train_predicted_targets_values.append(train_predicted_targets)
 
-            eposh_validation_losses, validation_predicted_targets = validation_func(
+            eposh_validation_losses, validation_predicted_targets, validation_true_targets = validation_func(
                     model,
                     validation_dataset_loader,
                     criterion
